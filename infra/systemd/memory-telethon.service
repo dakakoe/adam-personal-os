@@ -1,0 +1,18 @@
+[Unit]
+Description=Telethon listener for personal contact memory
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ops
+WorkingDirectory=/srv/memory/apps/telethon
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/srv/memory/apps/telethon/.venv/bin/python -m fetcher
+Restart=on-failure
+RestartSec=10s
+StandardOutput=append:/srv/memory/logs/telethon.log
+StandardError=append:/srv/memory/logs/telethon.log
+
+[Install]
+WantedBy=multi-user.target

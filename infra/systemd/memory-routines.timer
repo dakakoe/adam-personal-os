@@ -1,0 +1,12 @@
+[Unit]
+Description=Materialize recurring routines into tasks each morning
+
+[Timer]
+# 00:10 Asia/Bangkok — just after midnight in the user's day, so the day's
+# routines are already in /today and /tasks when he wakes. Generate-on-save
+# covers same-day routine edits; this is the daily roll-over.
+OnCalendar=*-*-* 00:10:00 Asia/Bangkok
+Persistent=true
+
+[Install]
+WantedBy=timers.target

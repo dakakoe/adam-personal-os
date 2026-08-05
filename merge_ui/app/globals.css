@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Dark-mode-first theme. Indigo accent (Linear-ish) on near-black zinc.
+   Avoid pure #000 to dodge OLED smear. */
+@theme inline {
+  --color-background: oklch(0.145 0.005 285);   /* near-black with the faintest blue cast */
+  --color-foreground: oklch(0.97 0 0);
+  --color-card: oklch(0.185 0.005 285);
+  --color-card-foreground: oklch(0.97 0 0);
+  --color-popover: oklch(0.2 0.005 285);
+  --color-popover-foreground: oklch(0.97 0 0);
+  --color-primary: oklch(0.62 0.18 280);        /* indigo */
+  --color-primary-foreground: oklch(0.98 0 0);
+  --color-secondary: oklch(0.235 0.005 285);
+  --color-secondary-foreground: oklch(0.97 0 0);
+  --color-muted: oklch(0.235 0.005 285);
+  --color-muted-foreground: oklch(0.65 0 0);
+  --color-accent: oklch(0.27 0.005 285);
+  --color-accent-foreground: oklch(0.97 0 0);
+  --color-destructive: oklch(0.58 0.22 27);     /* red */
+  --color-destructive-foreground: oklch(0.98 0 0);
+  --color-border: oklch(0.27 0.005 285 / 0.6);
+  --color-input: oklch(0.27 0.005 285 / 0.5);
+  --color-ring: oklch(0.62 0.18 280);
+
+  /* Channel-specific accent colors used by identity chips */
+  --color-channel-telegram: oklch(0.72 0.13 230);    /* sky blue */
+  --color-channel-email: oklch(0.7 0.16 95);          /* amber */
+  --color-channel-linkedin: oklch(0.5 0.16 245);      /* darker blue */
+  --color-channel-phone: oklch(0.72 0.16 145);        /* green */
+  --color-channel-x: oklch(0.55 0 0);                  /* near-black gray */
+  --color-channel-instagram: oklch(0.68 0.2 0);        /* magenta */
+  --color-channel-github: oklch(0.5 0 0);              /* gray */
+  --color-channel-website: oklch(0.7 0.05 200);        /* teal-gray */
+
+  --radius: 0.625rem;
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+html, body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers should never shift the layout — tabular figures for IDs, phones,
+   counts, dates. */
+.tabular { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
+
+/* Hide the scrollbar but keep scrolling (horizontal tab strips on mobile). */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Custom scrollbar: thin, muted */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: oklch(0.3 0.005 285); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.4 0.005 285); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Native date/time inputs render their picker indicator dark-on-dark in our
+   dark theme (the calendar icon looks black/invisible). color-scheme: dark
+   tells the browser to draw the control — including the icon — in dark mode. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* Mail undo toast: the countdown bar drains over the undo window. Pure CSS —
+   commit timing is a setTimeout in mail-client; this is only the visual.
+   (Under prefers-reduced-motion the bar just sits empty; the toast's own
+   duration still communicates the window.) */
+@keyframes mail-undo-bar {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+.mail-undo-bar {
+  animation: mail-undo-bar 5s linear forwards;
+}
