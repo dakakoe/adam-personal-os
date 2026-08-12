@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Capture to ADAM</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <span class="brand">ADAM</span>
+      <a id="options-link" href="#" class="quiet">Settings</a>
+    </header>
+
+    <section id="loading" class="pad">Reading the profile…</section>
+
+    <section id="blocked" class="pad hidden">
+      <p id="blocked-msg"></p>
+      <button id="blocked-action" class="primary hidden"></button>
+    </section>
+
+    <section id="form" class="hidden">
+      <p id="known" class="banner hidden"></p>
+
+      <label for="f-name">Name</label>
+      <input id="f-name" type="text" />
+
+      <div class="two">
+        <div>
+          <label for="f-title">Title</label>
+          <input id="f-title" type="text" />
+        </div>
+        <div>
+          <label for="f-company">Company</label>
+          <input id="f-company" type="text" />
+        </div>
+      </div>
+
+      <label for="f-location">Location</label>
+      <input id="f-location" type="text" />
+
+      <label for="f-headline">Headline</label>
+      <input id="f-headline" type="text" />
+
+      <div class="two">
+        <div>
+          <label for="f-emails">Email(s)</label>
+          <input id="f-emails" type="text" placeholder="comma-separated" />
+        </div>
+        <div>
+          <label for="f-phones">Phone(s)</label>
+          <input id="f-phones" type="text" placeholder="comma-separated" />
+        </div>
+      </div>
+      <button id="contact-info" class="link-btn">＋ Pull contact info from LinkedIn</button>
+
+      <label for="f-note">Note</label>
+      <textarea id="f-note" rows="2" placeholder="Why this person matters, where you met…"></textarea>
+
+      <label class="check">
+        <input id="f-about" type="checkbox" checked />
+        Send the About text and job history too
+      </label>
+
+      <div class="row">
+        <button id="save" class="primary">Save to ADAM</button>
+        <button id="rescan">Rescan</button>
+      </div>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section id="done" class="pad hidden">
+      <p id="done-msg" class="ok"></p>
+      <ul id="done-detail" class="detail"></ul>
+      <a id="done-link" class="primary as-button" target="_blank" rel="noreferrer">Open in ADAM</a>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

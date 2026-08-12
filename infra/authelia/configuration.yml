@@ -1,0 +1,66 @@
+# Authelia main config — Phase 3 (Auth). Lives on the droplet at
+# /srv/memory/authelia/configuration.yml (mounted into the container at /config).
+# Secrets are NOT here — they come from env (AUTHELIA_*) set in docker-compose
+# from /srv/memory/secrets/.env. Authelia validates this file on startup and
+# prints clear errors; iterate if a key is rejected by the pinned version.
+
+theme: 'dark'
+
+server:
+  address: 'tcp://0.0.0.0:9091'
+
+log:
+  level: 'info'
+
+totp:
+  issuer: 'example.com'
+
+# Passkeys / security keys.
+webauthn:
+  disable: false
+  display_name: 'example.com Personal OS'
+
+authentication_backend:
+  file:
+    path: '/config/users_database.yml'
+    password:
+      algorithm: 'argon2'
+
+# Who can reach what. Default deny; only merge requires login (two-factor).
+# crm/memory/engage/marketing keep their own existing auth and are NOT fronted
+# by Authelia here.
+access_control:
+  default_policy: 'deny'
+  rules:
+    - domain: 'merge.example.com'
+      policy: 'two_factor'
+
+session:
+  # session.secret comes from AUTHELIA_SESSION_SECRET (env).
+  cookies:
+    - domain: 'example.com'
+      authelia_url: 'https://auth.example.com'
+      default_redirection_url: 'https://merge.example.com'
+      expiration: '1h'
+      inactivity: '30m'
+      remember_me: '1M'
+  redis:
+    host: 'redis'
+    port: 6379
+
+# Brute-force protection.
+regulation:
+  max_retries: 3
+  find_time: '2m'
+  ban_time: '5m'
+
+storage:
+  # storage.encryption_key comes from AUTHELIA_STORAGE_ENCRYPTION_KEY (env).
+  local:
+    path: '/config/db.sqlite3'
+
+# No SMTP for a personal setup: 2FA-enrollment / reset links are written to a
+# file on the droplet, which you read during enrollment.
+notifier:
+  filesystem:
+    filename: '/config/notification.txt'
