@@ -1,0 +1,12 @@
+[project]
+name = "memory-daily-planner"
+version = "0.1.0"
+description = "Synthesizes open work into a daily plan narrative + focus list (Phase 4 v1)."
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.40",
+    "asyncpg>=0.29",
+]
+
+[tool.uv]
+package = false

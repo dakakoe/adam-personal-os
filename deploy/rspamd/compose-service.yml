@@ -1,0 +1,19 @@
+# Add this service to /srv/memory/docker-compose.yml (under `services:`).
+# It joins the `internal` network to reach `redis:6379`, and publishes both
+# workers on 127.0.0.1 only so merge_api (on the host) can POST /checkv2
+# (normal, 11333) and /learnspam,/learnham (controller, 11334 — Bayes).
+
+  rspamd:
+    image: rspamd/rspamd:3.9
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - /srv/memory/rspamd/local.d:/etc/rspamd/local.d:ro
+      - /srv/memory/data/rspamd:/var/lib/rspamd
+    ports:
+      - "127.0.0.1:11333:11333"
+      - "127.0.0.1:11334:11334"
+    networks:
+      - internal

@@ -1,0 +1,24 @@
+[Unit]
+Description=Next.js frontend for the memory merge UI
+After=network.target memory-merge-api.service
+Wants=memory-merge-api.service
+
+[Service]
+Type=simple
+User=ops
+WorkingDirectory=/srv/memory/apps/merge_ui
+# next-bin lives in node_modules after pnpm install; npm/pnpm cache is on
+# the droplet (not behind nvm), so PATH needs node + the local bin.
+Environment=NODE_ENV=production
+Environment=HOSTNAME=0.0.0.0
+Environment=PORT=3100
+# Where the Next.js server forwards /api/* via rewrites
+Environment=MERGE_API_URL=http://127.0.0.1:9100
+ExecStart=/usr/bin/env node_modules/.bin/next start -p 3100 -H 0.0.0.0
+Restart=always
+RestartSec=5
+StandardOutput=append:/srv/memory/logs/merge_ui.log
+StandardError=append:/srv/memory/logs/merge_ui.log
+
+[Install]
+WantedBy=multi-user.target

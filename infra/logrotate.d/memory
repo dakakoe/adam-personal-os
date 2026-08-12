@@ -1,0 +1,17 @@
+# Source of truth for /etc/logrotate.d/memory on the droplet.
+# Updated 2026-05-24: added `copytruncate` after a midnight rotation
+# silently stranded all daemon log fds on the renamed .log.1 files.
+
+/srv/memory/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    missingok
+    # Daemons run under systemd with StandardOutput=append: and don't
+    # know about log rotation. copytruncate copies the file and zeroes
+    # the original so the daemon's already-open fd keeps working.
+    copytruncate
+    create 0640 ops ops
+}
