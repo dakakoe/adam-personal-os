@@ -1,0 +1,22 @@
+[Unit]
+Description=Telegram capture bot (long-poll → task/opportunity/calendar, inline confirm)
+After=network.target memory-merge-api.service
+Requires=memory-merge-api.service
+
+[Service]
+Type=simple
+User=ops
+# Low priority: this process also runs faster-whisper; don't starve the
+# always-on API / UI or the batch whisper_worker.
+Nice=15
+IOSchedulingClass=idle
+WorkingDirectory=/srv/memory/apps/telegram_bot
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/srv/memory/apps/telegram_bot/.venv/bin/python -m bot
+Restart=on-failure
+RestartSec=10s
+StandardOutput=append:/srv/memory/logs/telegram_bot.log
+StandardError=append:/srv/memory/logs/telegram_bot.log
+
+[Install]
+WantedBy=multi-user.target

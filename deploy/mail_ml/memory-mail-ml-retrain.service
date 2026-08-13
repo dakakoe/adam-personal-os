@@ -1,0 +1,22 @@
+[Unit]
+Description=Weekly self-gating SetFit retrain (promote only if acc >= gate)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/mail_ml
+EnvironmentFile=/srv/memory/secrets/.env
+Environment=MAIL_ML_MODEL_DIR=/srv/memory/data/mail_ml/model
+Environment=OMP_NUM_THREADS=2
+Environment=TOKENIZERS_PARALLELISM=false
+# ~72 min at 150/class on 4 vCPU; a wedged run must die loudly and release the
+# flock rather than hold the model lock forever.
+RuntimeMaxSec=4h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/srv/memory/apps/mail_ml/retrain.sh
+StandardOutput=append:/srv/memory/logs/mail_ml_retrain.log
+StandardError=append:/srv/memory/logs/mail_ml_retrain.log
