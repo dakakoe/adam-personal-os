@@ -1,0 +1,10 @@
+[Unit]
+Description=Classify new mail every 30 minutes (Phase C SetFit)
+
+[Timer]
+OnBootSec=6min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

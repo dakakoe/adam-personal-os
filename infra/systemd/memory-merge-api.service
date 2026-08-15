@@ -1,0 +1,23 @@
+[Unit]
+Description=FastAPI backend for the memory merge UI
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ops
+WorkingDirectory=/srv/memory/apps/merge_api
+EnvironmentFile=/srv/memory/secrets/.env
+# The bearer token lives in /srv/memory/secrets/.env as MERGE_API_BEARER_TOKEN
+Environment=MERGE_API_HOST=0.0.0.0
+Environment=MERGE_API_PORT=9100
+# Sensitivity routing: sensitive-contact drafts via local Ollama.
+Environment=OLLAMA_URL=http://127.0.0.1:11434
+ExecStart=/srv/memory/apps/merge_api/.venv/bin/python -m merge_api
+Restart=always
+RestartSec=5
+StandardOutput=append:/srv/memory/logs/merge_api.log
+StandardError=append:/srv/memory/logs/merge_api.log
+
+[Install]
+WantedBy=multi-user.target
