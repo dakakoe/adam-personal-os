@@ -1,0 +1,12 @@
+[Unit]
+Description=Twice-daily scan of recent conversations for task/opportunity suggestions
+
+[Timer]
+# 10:00 and 18:00 UTC (= 17:00 / 01:00 Asia/Bangkok). Midday catches the
+# morning's threads; evening sweeps the afternoon's. Lookback=48h covers
+# any missed run.
+OnCalendar=*-*-* 10,18:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

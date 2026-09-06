@@ -1,0 +1,17 @@
+# Appended to /srv/memory/docker-compose.override.yml (under `services:`).
+# Local LLM for private inference (Personal OS Phase 5). 127.0.0.1 only.
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - /srv/memory/data/ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_KEEP_ALIVE: "5m"     # unload after idle → RAM back for SetFit et al
+    mem_limit: 3500m
+    networks:
+      - internal

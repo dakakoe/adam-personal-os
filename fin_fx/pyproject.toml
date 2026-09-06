@@ -1,0 +1,12 @@
+[project]
+name = "memory-fin-fx"
+version = "0.1.0"
+description = "Daily FX rates (fiat → USD numeraire) for the budget module, from frankfurter.app."
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.29",
+    "httpx>=0.27",
+]
+
+[tool.uv]
+package = false

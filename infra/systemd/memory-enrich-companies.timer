@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly company domain/country backfill
+
+[Timer]
+# Sunday 05:15 UTC = 12:15 Asia/Bangkok — in the quiet morning window, after
+# the 04:30 profile-refresh, well clear of the 03:00 backup.
+OnCalendar=Sun *-*-* 05:15:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
