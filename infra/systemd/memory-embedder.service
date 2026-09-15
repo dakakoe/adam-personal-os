@@ -1,0 +1,28 @@
+[Unit]
+Description=Local sentence-transformers embedder (canonical.interaction → memory.interaction_embedding)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ops
+# Low priority so the live ingester and MCP queries stay responsive
+# while the bulk backfill grinds. Nice + ionice mirror the whisper
+# worker's settings.
+Nice=15
+IOSchedulingClass=idle
+WorkingDirectory=/srv/memory/apps/embedding_worker
+EnvironmentFile=/srv/memory/secrets/.env
+# Bump to 2 threads (matches whisper) — total CPU footprint is ~4 cores
+# when both workers are encoding, which the 4-vCPU droplet handles
+# under load-balancing fine.
+Environment=EMBEDDER_CPU_THREADS=2
+Environment=EMBEDDER_BATCH_SIZE=64
+ExecStart=/srv/memory/apps/embedding_worker/.venv/bin/python -m embedder
+Restart=on-failure
+RestartSec=30s
+StandardOutput=append:/srv/memory/logs/embedder.log
+StandardError=append:/srv/memory/logs/embedder.log
+
+[Install]
+WantedBy=multi-user.target

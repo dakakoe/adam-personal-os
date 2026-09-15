@@ -1,0 +1,10 @@
+[Unit]
+Description=Drain unheadered mail every 20 min (mail polish backfill)
+
+[Timer]
+OnBootSec=12min
+OnUnitActiveSec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

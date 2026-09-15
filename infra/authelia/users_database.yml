@@ -1,0 +1,24 @@
+# Authelia users. Lives on the server at /srv/memory/authelia/users_database.yml.
+#
+# The `password` values below are PLACEHOLDERS. Generate real argon2 hashes
+# (you pick the passwords — they are never stored in plaintext):
+#
+#   docker run --rm authelia/authelia:4.38 \
+#     authelia crypto hash generate argon2 --password 'YOUR_PASSWORD'
+#
+# Paste each resulting "$argon2id$..." string in place of the placeholder.
+# Groups map to the app's roles: admin → full access, budget → the member scope.
+
+users:
+  admin:
+    displayname: 'Owner'
+    password: 'REPLACE_WITH_ARGON2_HASH'
+    email: 'you@example.com'
+    groups:
+      - 'admin'
+
+  member:
+    displayname: 'Member'
+    password: 'REPLACE_WITH_ARGON2_HASH'
+    groups:
+      - 'budget'
