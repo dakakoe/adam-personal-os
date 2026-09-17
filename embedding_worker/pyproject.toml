@@ -1,0 +1,20 @@
+[project]
+name = "memory-embedder"
+version = "0.1.0"
+description = "Local sentence-transformers embedder for memory.interaction_embedding."
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+    "sentence-transformers>=3.0",
+    # Pin to a CPU-friendly torch — avoids pulling CUDA wheels on the droplet.
+    "torch>=2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+# CPU-only torch from PyPI is the default on most x86_64 Linux; no extra
+# index needed. If we ever need to be explicit:
+#   torch = { index = "https://download.pytorch.org/whl/cpu" }

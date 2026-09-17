@@ -1,0 +1,11 @@
+[project]
+name = "memory-linkedin-import"
+version = "0.1.0"
+description = "LinkedIn Data Export (ZIP) importer for the personal memory system."
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.29",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,20 @@
+[Unit]
+Description=Whisper transcription worker (low priority)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ops
+Nice=15
+IOSchedulingClass=idle
+WorkingDirectory=/srv/memory/apps/whisper_worker
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/srv/memory/apps/whisper_worker/.venv/bin/python -m worker
+Restart=on-failure
+RestartSec=30s
+StandardOutput=append:/srv/memory/logs/whisper.log
+StandardError=append:/srv/memory/logs/whisper.log
+
+[Install]
+WantedBy=multi-user.target

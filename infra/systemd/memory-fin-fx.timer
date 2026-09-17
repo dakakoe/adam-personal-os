@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily FX rate refresh for the budget module
+
+[Timer]
+# 04:45 UTC = 11:45 Asia/Bangkok — after profile-refresh (04:30), before the
+# weekly company backfill (Sun 05:15). frankfurter updates ~CET working days.
+OnCalendar=*-*-* 04:45:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
