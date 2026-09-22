@@ -1,0 +1,18 @@
+[project]
+name = "memory-profile-builder"
+version = "0.1.0"
+description = "LLM-generated per-person profiles for the contact memory."
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.40",
+    "asyncpg>=0.29",
+    "httpx>=0.27",
+    "pgvector>=0.3",
+    # The same multilingual-e5-base used by the embedder, so profile
+    # embeddings live in the same vector space as interaction_embedding.
+    "sentence-transformers>=3.0",
+    "torch>=2.0",
+]
+
+[tool.uv]
+package = false

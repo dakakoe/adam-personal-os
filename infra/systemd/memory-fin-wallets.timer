@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh crypto wallet holdings (daily)
+
+[Timer]
+# 05:05 UTC = 12:05 Asia/Bangkok — after the FX/price refresh (04:45) so values
+# are priced with fresh rates.
+OnCalendar=*-*-* 05:05:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
