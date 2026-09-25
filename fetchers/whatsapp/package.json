@@ -1,0 +1,24 @@
+{
+  "name": "memory-whatsapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhatsApp ingester for the personal contact-memory system. Read-only: holds a linked-device socket and writes raw rows. Never sends.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "live": "node src/index.js live",
+    "pair": "node src/index.js pair",
+    "test": "node --test test/*.test.js",
+    "typecheck": "tsc --noEmit --allowJs --checkJs --target es2022 --module nodenext --moduleResolution nodenext --skipLibCheck src/*.js"
+  },
+  "dependencies": {
+    "baileys": "6.7.24",
+    "pg": "^8.13.1",
+    "pino": "^9.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

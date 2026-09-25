@@ -1,0 +1,202 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/app-shell";
+import { PersonsCompanyFilter } from "@/components/persons-company-filter";
+import { PersonsCircleFilter } from "@/components/persons-circle-filter";
+import { PersonsSourceFilter } from "@/components/persons-source-filter";
+import { PersonsSort } from "@/components/persons-sort";
+import { PersonsList, PersonRowInner } from "@/components/persons-list";
+import { api, type PersonRow, type ContactCircle, type PersonSort } from "@/lib/api";
+import { personsHref, type PersonsFilters } from "@/lib/persons-filters";
+import { ChevronLeft, ChevronRight, GitMerge, Trash2 } from "lucide-react";
+
+// Reserved circle key for "in no circle at all" — the untagged backlog.
+// Slugified keys are [a-z0-9-], so a real circle can never collide.
+const NO_CIRCLE = "__none__";
+
+const PAGE_SIZE = 100;
+
+async function fetchData(
+  q: string | undefined, companyId: string | undefined,
+  circle: string | undefined, source: string | undefined,
+  sort: PersonSort | undefined, offset: number,
+) {
+  const cookie = (await cookies()).toString();
+  try {
+    // Fetch the page slice and the total count in parallel so the
+    // "Showing N–M of TOTAL" header is honest about the corpus size
+    // (the previous "100 shown" implied "100 total" and was a lie).
+    const [rows, count] = await Promise.all([
+      api.listPersons({ q, company_id: companyId, circle, source, sort, limit: PAGE_SIZE, offset }, { cookieHeader: cookie }),
+      api.countPersons({ q, company_id: companyId, circle, source }, { cookieHeader: cookie }),
+    ]);
+    return { rows, total: count.count };
+  } catch {
+    return { rows: [] as PersonRow[], total: 0 };
+  }
+}
+
+export default async function PersonsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; offset?: string; company?: string; circle?: string; source?: string; sort?: string }>;
+}) {
+  const { q, offset: offsetStr, company, circle, source, sort: sortRaw } = await searchParams;
+  const offset = Math.max(0, parseInt(offsetStr ?? "0", 10) || 0);
+  // Anything unrecognised in the URL falls back to the default rather than
+  // erroring — the API does the same, so a hand-edited link still renders.
+  const sort: PersonSort | undefined =
+    sortRaw === "recent" || sortRaw === "oldest" ? sortRaw : undefined;
+  const { rows, total } = await fetchData(q, company, circle, source, sort, offset);
+  // budget (member) users get a read-only, scoped contacts list: no admin tools
+  // (merge/cleanup) and rows don't link into the admin-only detail page.
+  const isAdmin = (await cookies()).get("merge_role")?.value !== "budget";
+  // Resolve the filtered company's name so the chip reads as a name, not a UUID.
+  let companyName: string | null = null;
+  if (company) {
+    try {
+      const co = await api.getCompany(company, { cookieHeader: (await cookies()).toString() });
+      companyName = co?.name ?? null;
+    } catch { /* keep null — chip falls back to "Company" */ }
+  }
+  // Same for the circle: the URL carries the key ('family'), the chip shows
+  // the label ('Family'). Falls back to the key, which is still readable.
+  // Fetched once for the page: the chip label AND the catalogue every row's
+  // tag dropdown needs. 100 rows fetching this themselves would be 100
+  // identical requests.
+  let circleCatalogue: ContactCircle[] = [];
+  try {
+    circleCatalogue = await api.listCircles({ cookieHeader: (await cookies()).toString() });
+  } catch { /* tagging degrades to "no circles yet"; the list still renders */ }
+  const circleLabel = circle === NO_CIRCLE
+    ? "No circle"
+    : circle
+      ? circleCatalogue.find((c) => c.key === circle)?.label ?? null
+      : null;
+  const from = total === 0 ? 0 : offset + 1;
+  const to = offset + rows.length;
+  const prevOffset = Math.max(0, offset - PAGE_SIZE);
+  const nextOffset = offset + PAGE_SIZE;
+  const hasPrev = offset > 0;
+  const hasNext = nextOffset < total;
+  // Everything the chips have to carry for each other, in one place.
+  const filters: PersonsFilters = { q, company, circle, source, sort };
+  // Paging is the one case that KEEPS the offset — it's the only control that
+  // means "same list, further down" — so it appends rather than using
+  // personsHref, which drops offset by design.
+  const pageHref = (newOffset: number) => {
+    const base = personsHref(filters);
+    if (newOffset <= 0) return base;
+    return `${base}${base.includes("?") ? "&" : "?"}offset=${newOffset}`;
+  };
+
+  return (
+    <AppShell>
+      <div className="p-4 sm:p-6 mx-auto w-full max-w-5xl">
+        <header className="mb-6 flex items-baseline justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">People</h1>
+            <p className="text-sm text-muted-foreground mt-1 tabular">
+              {total === 0
+                ? "no people found"
+                : <>Showing <span className="text-foreground font-medium">{from.toLocaleString()}–{to.toLocaleString()}</span> of <span className="text-foreground font-medium">{total.toLocaleString()}</span></>}
+              {" "}· press{" "}
+              <kbd className="font-mono text-[10px] px-1 py-0.5 rounded border border-border bg-muted">
+                ⌘K
+              </kbd>{" "}
+              to search
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+            <PersonsCompanyFilter currentId={company ?? null} currentName={companyName} carry={filters} />
+            <PersonsCircleFilter currentKey={circle ?? null} currentLabel={circleLabel} carry={filters} />
+            <PersonsSourceFilter current={source ?? null} carry={filters} />
+            <PersonsSort current={sort ?? null} carry={filters} />
+            {isAdmin && (
+              <>
+                <Link
+                  href="/merge"
+                  className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                >
+                  <GitMerge className="h-3.5 w-3.5" />
+                  Merge queue
+                </Link>
+                <Link
+                  href="/cleanup"
+                  className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Cleanup
+                </Link>
+              </>
+            )}
+            {(hasPrev || hasNext) && (
+              <nav className="flex items-center gap-1">
+                <Link
+                  href={hasPrev ? pageHref(prevOffset) : "#"}
+                  aria-disabled={!hasPrev}
+                  className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border text-xs ${hasPrev ? "hover:bg-accent" : "opacity-40 pointer-events-none"}`}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Prev
+                </Link>
+                <Link
+                  href={hasNext ? pageHref(nextOffset) : "#"}
+                  aria-disabled={!hasNext}
+                  className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border text-xs ${hasNext ? "hover:bg-accent" : "opacity-40 pointer-events-none"}`}
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </nav>
+            )}
+          </div>
+        </header>
+
+        {isAdmin ? (
+          <PersonsList rows={rows} circleCatalogue={circleCatalogue} />
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden bg-card/40">
+            {rows.length === 0 ? (
+              <div className="p-10 text-center text-muted-foreground text-sm">No people found.</div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {rows.map((p) => (
+                  <li key={p.person_id}>
+                    <div className="flex items-center gap-3 px-4 py-2.5">
+                      <PersonRowInner row={p} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {(hasPrev || hasNext) && (
+          <nav className="mt-4 flex items-center justify-between gap-3 text-xs">
+            <Link
+              href={hasPrev ? pageHref(prevOffset) : "#"}
+              aria-disabled={!hasPrev}
+              className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border ${hasPrev ? "hover:bg-accent" : "opacity-40 pointer-events-none"}`}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Prev {PAGE_SIZE}
+            </Link>
+            <span className="text-muted-foreground tabular">
+              page {Math.floor(offset / PAGE_SIZE) + 1} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            </span>
+            <Link
+              href={hasNext ? pageHref(nextOffset) : "#"}
+              aria-disabled={!hasNext}
+              className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border ${hasNext ? "hover:bg-accent" : "opacity-40 pointer-events-none"}`}
+            >
+              Next {PAGE_SIZE}
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </nav>
+        )}
+      </div>
+    </AppShell>
+  );
+}

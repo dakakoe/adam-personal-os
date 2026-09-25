@@ -1,0 +1,18 @@
+[Unit]
+Description=MCP server exposing contact memory
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ops
+WorkingDirectory=/srv/memory/apps/mcp_server
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/srv/memory/apps/mcp_server/.venv/bin/python -m server
+Restart=on-failure
+RestartSec=10s
+StandardOutput=append:/srv/memory/logs/mcp.log
+StandardError=append:/srv/memory/logs/mcp.log
+
+[Install]
+WantedBy=multi-user.target

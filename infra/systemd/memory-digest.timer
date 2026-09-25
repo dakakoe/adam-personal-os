@@ -1,0 +1,11 @@
+[Unit]
+Description=Run daily contact digest at 7am Asia/Bangkok
+
+[Timer]
+# Droplet runs UTC but the user lives in your city — anchor to Bangkok
+# (UTC+7) so the digest lands at morning-coffee time, not midday UTC.
+OnCalendar=*-*-* 07:00:00 Asia/Bangkok
+Persistent=true
+
+[Install]
+WantedBy=timers.target
