@@ -1,0 +1,46 @@
+# Add to /srv/memory/Caddyfile, then recreate caddy so it picks up MERGE_PROXY_SECRET:
+#   docker compose --env-file secrets/.env up -d caddy
+# Requires: authelia service running, MERGE_PROXY_SECRET in .env AND in caddy's
+# compose environment, and merge_api built with the hybrid auth (auth.py).
+
+merge.example.com {
+    encode zstd gzip
+
+    # Machines: a bearer token bypasses Authelia entirely; merge_api validates it.
+    @bearer header Authorization "Bearer *"
+    handle @bearer {
+        handle /api/* {
+            reverse_proxy host.docker.internal:9100
+        }
+        handle {
+            reverse_proxy host.docker.internal:3100
+        }
+    }
+
+    # Humans: must pass Authelia (password + 2FA). On success, Caddy injects the
+    # shared secret so merge_api trusts the Authelia Remote-Groups identity.
+    handle {
+        forward_auth memory-authelia-1:9091 {
+            uri /api/authz/forward-auth
+            copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+        }
+
+        handle /api/* {
+            reverse_proxy host.docker.internal:9100 {
+                header_up X-Proxy-Secret {env.MERGE_PROXY_SECRET}
+            }
+        }
+        handle {
+            reverse_proxy host.docker.internal:3100 {
+                header_up X-Proxy-Secret {env.MERGE_PROXY_SECRET}
+            }
+        }
+    }
+
+    log {
+        output file /var/log/caddy/merge.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}

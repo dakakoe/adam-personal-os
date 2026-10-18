@@ -1,0 +1,17 @@
+[Unit]
+Description=Backfill company domain + country (LLM lookup; idempotent — only fills empty fields)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory
+EnvironmentFile=/srv/memory/secrets/.env
+# Conservative LLM fill — the model returns null rather than guess, and the
+# script never overwrites a set value. --limit caps the per-run credit spend;
+# new companies appear slowly, so a weekly drip through the (shrinking) unfilled
+# set is plenty. Re-runs harmlessly re-attempt the genuinely-ambiguous names.
+ExecStart=/srv/memory/apps/merge_api/.venv/bin/python scripts/enrich_companies.py --limit 120
+StandardOutput=append:/srv/memory/logs/enrich_companies.log
+StandardError=append:/srv/memory/logs/enrich_companies.log
