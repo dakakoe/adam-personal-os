@@ -1,0 +1,26 @@
+[Unit]
+Description=Classify ingested mail (SetFit newsletter/transactional/personal) — Phase C
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/mail_ml
+EnvironmentFile=/srv/memory/secrets/.env
+# Bound each tick; new mail is classified over a few cycles after a backlog.
+Environment=MAIL_ML_MODEL_DIR=/srv/memory/data/mail_ml/model
+# Keep torch single-threaded-ish so the classifier never starves the box (4 CPU,
+# shared with Twenty/Postgres/Rspamd). Inference is fast; this caps the spike.
+Environment=OMP_NUM_THREADS=2
+Environment=TOKENIZERS_PARALLELISM=false
+Environment=OLLAMA_URL=http://127.0.0.1:11434
+# flock -n: while the weekly retrain holds the model lock (training peaks
+# ~3.6GB — a concurrent torch-load could OOM the box), skip this tick silently
+# (exit 0 → no false Telegram alert) and resume on the next 30-min tick.
+ExecStart=/bin/bash -c 'exec 9>/srv/memory/data/mail_ml/.mail_ml.lock; flock -n 9 || { echo "mail-ml classify skipped: retrain in progress"; exit 0; }; exec /srv/memory/apps/mail_ml/.venv/bin/python -m mail_ml classify --limit 2000'
+# Phase 5: local-LLM second opinion on the low-confidence slice (bounded — ~4-6s
+# per message on CPU, so 60/run ≈ ≤6 min inside the 30-min timer).
+ExecStart=/bin/bash -c 'exec 9>/srv/memory/data/mail_ml/.mail_ml.lock; flock -n 9 || { echo "mail-ml refine skipped: retrain in progress"; exit 0; }; exec /srv/memory/apps/mail_ml/.venv/bin/python -m mail_ml refine --limit 60'
+StandardOutput=append:/srv/memory/logs/mail_ml.log
+StandardError=append:/srv/memory/logs/mail_ml.log
