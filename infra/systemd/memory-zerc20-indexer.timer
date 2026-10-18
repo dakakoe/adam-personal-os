@@ -1,0 +1,13 @@
+[Unit]
+Description=zERC20 log indexer — follow the chain tip
+
+[Timer]
+# Every 15 minutes. The dashboard reads at most hourly, and each pass is a
+# handful of eth_getLogs calls over ~15 minutes of blocks, so this is cheap
+# and keeps any single window small enough for the stingiest public endpoint.
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Backfill triage headers on pre-Phase-B mail (mail polish drain)
+After=network.target memory-merge-api.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/memory/secrets/.env
+# Curls the existing bulk endpoint (bearer auth) — the enrichment logic lives in
+# merge_api (messages.get format=full at concurrency 8, ~2500 Gmail quota units
+# per 500-message run, far under the per-user cap). Bounded per run; once the
+# backlog drains each run is a single indexed no-op query, and the timer
+# self-heals future bulk imports / new accounts.
+ExecStart=/bin/bash -lc 'curl -sS -m 540 --fail-with-body -X POST -H "Authorization: Bearer $MERGE_API_BEARER_TOKEN" "http://127.0.0.1:9100/api/mail/backfill-headers?limit=500"'
+TimeoutStartSec=600
+StandardOutput=append:/srv/memory/logs/mail_backfill.log
+StandardError=append:/srv/memory/logs/mail_backfill.log
