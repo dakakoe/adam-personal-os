@@ -1,0 +1,109 @@
+# Phase 3 — Caddy reverse proxy.
+# Lives on the droplet at /srv/memory/Caddyfile
+
+{
+    email {$CADDY_EMAIL}
+}
+
+
+{$CADDY_DOMAIN_MCP} {
+    # MCP server: a systemd unit on the host, bound 0.0.0.0:9000; UFW + the DO
+    # firewall block public 9000, so this proxy is the only path. The app
+    # authenticates every request itself — an OAuth token it issued (Claude
+    # Cowork / claude.ai) or the static MCP_BEARER_TOKEN (Claude Code).
+
+    # Public /health for external uptime monitors (no auth). A Caddy-level
+    # response on purpose: still 200 while memory-mcp.service restarts.
+    @health path /health
+    handle @health {
+        respond "ok" 200
+    }
+
+    # The consent page. Authelia first (password + 2FA); the app then trusts
+    # Remote-User only because X-Proxy-Secret proves the hop came through here.
+    handle /oauth/* {
+        forward_auth memory-authelia-1:9091 {
+            uri /api/authz/forward-auth
+            copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+        }
+        reverse_proxy host.docker.internal:9000 {
+            header_up X-Proxy-Secret {env.MERGE_PROXY_SECRET}
+        }
+    }
+
+    # The MCP endpoint, OAuth and discovery. The secret header is stripped so
+    # nothing on this path can impersonate the Authelia hop. No buffering:
+    # streamable-http uses SSE under the hood.
+    @connector path /mcp /mcp/* /authorize /token /register /revoke /.well-known/*
+    handle @connector {
+        reverse_proxy host.docker.internal:9000 {
+            header_up -X-Proxy-Secret
+            header_up -Remote-User
+            header_up -Remote-Groups
+            flush_interval -1
+        }
+    }
+    handle {
+        respond "Not found" 404
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+    }
+}
+# Add to /srv/memory/Caddyfile, then `docker compose restart caddy`.
+# Same TLS scheme as the other example.com subdomains.
+
+merge.example.com {
+    encode zstd gzip
+
+    # Machines: a bearer token bypasses Authelia entirely; merge_api validates it.
+    @bearer header Authorization "Bearer *"
+    handle @bearer {
+        handle /api/* {
+            reverse_proxy host.docker.internal:9100
+        }
+        handle {
+            reverse_proxy host.docker.internal:3100
+        }
+    }
+
+    # Humans: must pass Authelia (password + 2FA). On success, Caddy injects the
+    # shared secret so merge_api trusts the Authelia Remote-Groups identity.
+    handle {
+        forward_auth memory-authelia-1:9091 {
+            uri /api/authz/forward-auth
+            copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+        }
+
+        handle /api/* {
+            reverse_proxy host.docker.internal:9100 {
+                header_up X-Proxy-Secret {env.MERGE_PROXY_SECRET}
+            }
+        }
+        handle {
+            reverse_proxy host.docker.internal:3100 {
+                header_up X-Proxy-Secret {env.MERGE_PROXY_SECRET}
+            }
+        }
+    }
+
+    log {
+        output file /var/log/caddy/merge.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
+# (Co-hosted sites — a marketing page, other apps — would get their own
+# server blocks here. Removed from this template; add your own if needed.)
+
+
+auth.example.com {
+    reverse_proxy memory-authelia-1:9091
+    encode gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+    }
+}

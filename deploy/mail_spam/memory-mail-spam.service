@@ -1,0 +1,15 @@
+[Unit]
+Description=Scan recent unscored mail for spam via Rspamd (Phase B2)
+After=network.target memory-merge-api.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/memory/secrets/.env
+# Curls the batch scan endpoint (bearer auth) so no separate venv is needed — the
+# scoring logic lives in merge_api. Bounded per run; re-runs only cover new mail.
+ExecStart=/bin/bash -lc 'curl -sS --fail-with-body -X POST -H "Authorization: Bearer $MERGE_API_BEARER_TOKEN" "http://127.0.0.1:9100/api/mail/scan-spam?limit=500"'
+# Then feed Bayes (triage iteration): spam = live Gmail spam folders, ham = our
+# scored-clean mail; each message learned once (memory.mail_bayes_learn ledger).
+ExecStart=/bin/bash -lc 'curl -sS --fail-with-body -X POST -H "Authorization: Bearer $MERGE_API_BEARER_TOKEN" "http://127.0.0.1:9100/api/mail/train-bayes?limit=200"'
+StandardOutput=append:/srv/memory/logs/mail_spam.log
+StandardError=append:/srv/memory/logs/mail_spam.log

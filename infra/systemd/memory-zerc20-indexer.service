@@ -1,0 +1,15 @@
+[Unit]
+Description=zERC20 log indexer — chain logs into the zerc20 schema (replaces Dune)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/zerc20_indexer
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/srv/memory/apps/zerc20_indexer/.venv/bin/python -m zerc20_indexer
+# A backfill can run long; the tail pass is seconds. This only bounds a wedged run.
+TimeoutStartSec=3600
+StandardOutput=append:/srv/memory/logs/zerc20_indexer.log
+StandardError=append:/srv/memory/logs/zerc20_indexer.log
