@@ -1,0 +1,12 @@
+[Unit]
+Description=Generate tomorrow's plan each evening at 20:30 Asia/Bangkok
+
+[Timer]
+# Droplet runs UTC but the user lives in your city — anchor to Bangkok (UTC+7)
+# so the plan lands before bed and is ready when he opens /today in the
+# morning. Mirrors the old Cowork "nightly-plan-tomorrow" cadence.
+OnCalendar=*-*-* 20:30:00 Asia/Bangkok
+Persistent=true
+
+[Install]
+WantedBy=timers.target

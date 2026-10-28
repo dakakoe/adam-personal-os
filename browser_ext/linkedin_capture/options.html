@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ADAM — LinkedIn capture settings</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="options">
+    <h1>ADAM · LinkedIn capture</h1>
+
+    <label for="apiBase">API base URL</label>
+    <input id="apiBase" type="url" placeholder="https://merge.example.com" spellcheck="false" />
+    <p class="hint">Where merge_api answers. Leave as-is unless you're pointing at a dev instance.</p>
+
+    <label for="token">Bearer token</label>
+    <input id="token" type="password" placeholder="MERGE_API_BEARER_TOKEN" spellcheck="false" />
+    <p class="hint">
+      The same value as <code>MERGE_API_BEARER_TOKEN</code> on the droplet. Stored in
+      <code>chrome.storage.local</code> — local to this browser profile, never synced to Google.
+    </p>
+
+    <div class="row">
+      <button id="save" class="primary">Save</button>
+      <button id="test">Test connection</button>
+    </div>
+    <p id="status" class="status"></p>
+
+    <script src="options.js"></script>
+  </body>
+</html>
