@@ -1,0 +1,11 @@
+[Unit]
+Description=zERC20 activity alerts — check every 15 minutes
+
+[Timer]
+# Offset from the indexer (which runs at :00/:15/:30/:45) so each check sees
+# freshly indexed blocks rather than racing them.
+OnCalendar=*:05/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Generate the daily plan narrative + focus list (Phase 4 v1)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/daily_planner
+EnvironmentFile=/srv/memory/secrets/.env
+# The nightly run plans for TOMORROW (it fires in the evening, before bed).
+# The UI "Regenerate" button runs the same worker with PLANNER_TARGET=today.
+Environment=PLANNER_TARGET=tomorrow
+Environment=PLANNER_TZ=Asia/Bangkok
+ExecStart=/srv/memory/apps/daily_planner/.venv/bin/python -m daily_planner
+StandardOutput=append:/srv/memory/logs/daily_plan.log
+StandardError=append:/srv/memory/logs/daily_plan.log

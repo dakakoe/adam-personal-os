@@ -1,0 +1,27 @@
+[project]
+name = "memory-mail-ml"
+version = "0.1.0"
+description = "SetFit content classifier (newsletter/transactional/personal) for the mail client — Phase C."
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.29",
+    "httpx>=0.27",        # Ollama refine tier (Phase 5)
+    "setfit>=1.1",
+    # setfit 1.1.x imports transformers.training_args.default_logdir, removed in
+    # transformers 5.x → pin to the 4.x line setfit is built against.
+    "transformers>=4.41,<5",
+    "scikit-learn>=1.4",
+    # torch is pulled in by setfit/sentence-transformers; pin the CPU build on the
+    # droplet via `uv sync --extra-index-url https://download.pytorch.org/whl/cpu`
+    # if the default wheel is too large.
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
