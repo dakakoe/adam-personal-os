@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily refresh of stale LLM profiles
+
+[Timer]
+# 04:30 UTC = 11:30 Asia/Bangkok. Sits in the quiet window between the
+# 03:00 UTC pg_dump backup and the 00:00 UTC digest (which ran 4.5h
+# earlier as 07:00 Asia/Bangkok).
+OnCalendar=*-*-* 04:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

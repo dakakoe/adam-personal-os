@@ -1,0 +1,6 @@
+# The linked-device session is auth-token-equivalent: anyone holding it can
+# read every message the account receives. Same treatment as the Telethon
+# session — never committed, never rsynced.
+session/
+session.bak.*/
+node_modules/

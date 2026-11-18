@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly encrypted media backup to off-droplet storage
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory
+ExecStart=/srv/memory/scripts/backup-media.sh
+StandardOutput=append:/srv/memory/logs/backup-media.log
+StandardError=append:/srv/memory/logs/backup-media.log

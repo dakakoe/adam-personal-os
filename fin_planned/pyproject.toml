@@ -1,0 +1,9 @@
+[project]
+name = "memory-fin-planned"
+version = "0.1.0"
+description = "Materializes due planned/recurring budget transactions (auto-post)."
+requires-python = ">=3.12"
+dependencies = ["asyncpg>=0.29"]
+
+[tool.uv]
+package = false

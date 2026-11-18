@@ -1,0 +1,10 @@
+[Unit]
+Description=zERC20 activity alerts — large transactions and bursts, by email
+After=network.target memory-merge-api.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/memory/secrets/.env
+ExecStart=/bin/bash -lc 'curl -sS --fail-with-body -X POST -H "Authorization: Bearer $MERGE_API_BEARER_TOKEN" http://127.0.0.1:9100/api/zerc20/alerts/check'
+StandardOutput=append:/srv/memory/logs/zerc20_alerts.log
+StandardError=append:/srv/memory/logs/zerc20_alerts.log

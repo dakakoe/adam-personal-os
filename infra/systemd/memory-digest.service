@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily contact digest
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/digest
+EnvironmentFile=/srv/memory/secrets/.env
+# The digest narrative runs WHOLESALE on local Ollama (raw message text never leaves the box).
+Environment=OLLAMA_URL=http://127.0.0.1:11434
+ExecStart=/srv/memory/apps/digest/.venv/bin/python -m digest
+StandardOutput=append:/srv/memory/logs/digest.log
+StandardError=append:/srv/memory/logs/digest.log

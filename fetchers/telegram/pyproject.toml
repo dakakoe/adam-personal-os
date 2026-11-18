@@ -1,0 +1,13 @@
+[project]
+name = "memory-telethon"
+version = "0.1.0"
+description = "Telegram ingester for the personal contact-memory system."
+requires-python = ">=3.12"
+dependencies = [
+    "telethon>=1.36,<2",
+    "asyncpg>=0.29",
+    "cryptg>=0.4",
+]
+
+[tool.uv]
+package = false

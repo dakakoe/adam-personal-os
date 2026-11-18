@@ -1,0 +1,20 @@
+[Unit]
+Description=Sync new Gmail messages + Google Contacts for all active accounts
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory/apps/gmail
+EnvironmentFile=/srv/memory/secrets/.env
+# Cap per account per run keeps each tick bounded; live-tail accounts catch
+# up over a few cycles after a long pause.
+Environment=GMAIL_SYNC_PER_ACCOUNT=500
+# Two ExecStart lines run sequentially for Type=oneshot. Mail first (the
+# high-volume side); contacts second (cheap, small payloads). Both are
+# idempotent so a failure in one doesn't leave inconsistent state.
+ExecStart=/srv/memory/apps/gmail/.venv/bin/python -m gmail sync
+ExecStart=/srv/memory/apps/gmail/.venv/bin/python -m gmail contacts-sync
+StandardOutput=append:/srv/memory/logs/gmail.log
+StandardError=append:/srv/memory/logs/gmail.log

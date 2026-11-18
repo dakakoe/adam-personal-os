@@ -1,0 +1,28 @@
+[Unit]
+Description=WhatsApp (Baileys) listener for personal contact memory
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ops
+WorkingDirectory=/srv/memory/apps/whatsapp
+EnvironmentFile=/srv/memory/secrets/.env
+Environment=NODE_ENV=production
+# Deliberate: this box has ~4.9G free with Ollama holding 3.5G, and an
+# unbounded Node heap sitting next to the Whisper worker is an OOM waiting to
+# happen. The listener's working set is small — a socket and a group-metadata
+# cache — so 512M is generous.
+Environment=NODE_OPTIONS=--max-old-space-size=512
+ExecStart=/usr/bin/env node src/index.js live
+Restart=on-failure
+RestartSec=10s
+# Exit 3 means another WhatsApp client claimed this session. Retrying would
+# start a tug-of-war that drops messages for both clients, so systemd must
+# stay out of it.
+RestartPreventExitStatus=3
+StandardOutput=append:/srv/memory/logs/whatsapp.log
+StandardError=append:/srv/memory/logs/whatsapp.log
+
+[Install]
+WantedBy=multi-user.target

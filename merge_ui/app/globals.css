@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Dark-mode-first theme. Indigo accent (Linear-ish) on near-black zinc.
+   Avoid pure #000 to dodge OLED smear. */
+@theme inline {
+  --color-background: oklch(0.145 0.005 285);   /* near-black with the faintest blue cast */
+  --color-foreground: oklch(0.97 0 0);
+  --color-card: oklch(0.185 0.005 285);
+  --color-card-foreground: oklch(0.97 0 0);
+  --color-popover: oklch(0.2 0.005 285);
+  --color-popover-foreground: oklch(0.97 0 0);
+  --color-primary: oklch(0.62 0.18 280);        /* indigo */
+  --color-primary-foreground: oklch(0.98 0 0);
+  --color-secondary: oklch(0.235 0.005 285);
+  --color-secondary-foreground: oklch(0.97 0 0);
+  --color-muted: oklch(0.235 0.005 285);
+  --color-muted-foreground: oklch(0.65 0 0);
+  --color-accent: oklch(0.27 0.005 285);
+  --color-accent-foreground: oklch(0.97 0 0);
+  --color-destructive: oklch(0.58 0.22 27);     /* red */
+  --color-destructive-foreground: oklch(0.98 0 0);
+  --color-border: oklch(0.27 0.005 285 / 0.6);
+  --color-input: oklch(0.27 0.005 285 / 0.5);
+  --color-ring: oklch(0.62 0.18 280);
+
+  /* Channel-specific accent colors used by identity chips */
+  --color-channel-telegram: oklch(0.72 0.13 230);    /* sky blue */
+  --color-channel-email: oklch(0.7 0.16 95);          /* amber */
+  --color-channel-linkedin: oklch(0.5 0.16 245);      /* darker blue */
+  --color-channel-phone: oklch(0.72 0.16 145);        /* green */
+  --color-channel-x: oklch(0.55 0 0);                  /* near-black gray */
+  --color-channel-instagram: oklch(0.68 0.2 0);        /* magenta */
+  --color-channel-github: oklch(0.5 0 0);              /* gray */
+  --color-channel-website: oklch(0.7 0.05 200);        /* teal-gray */
+  --color-channel-whatsapp: oklch(0.75 0.17 150);      /* whatsapp green */
+  --color-channel-meeting: oklch(0.72 0.14 300);       /* violet — calls */
+
+  --radius: 0.625rem;
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+html, body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers should never shift the layout — tabular figures for IDs, phones,
+   counts, dates. */
+.tabular { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
+
+/* Hide the scrollbar but keep scrolling (horizontal tab strips on mobile). */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Custom scrollbar: thin, muted */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: oklch(0.3 0.005 285); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.4 0.005 285); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Native date/time inputs render their picker indicator dark-on-dark in our
+   dark theme (the calendar icon looks black/invisible). color-scheme: dark
+   tells the browser to draw the control — including the icon — in dark mode. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* Mail undo toast: the countdown bar drains over the undo window. Pure CSS —
+   commit timing is a setTimeout in mail-client; this is only the visual.
+   (Under prefers-reduced-motion the bar just sits empty; the toast's own
+   duration still communicates the window.) */
+@keyframes mail-undo-bar {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+.mail-undo-bar {
+  animation: mail-undo-bar 5s linear forwards;
+}
+
+/* --- Notes editor (TipTap) ------------------------------------------------
+   The page body: comfortable reading measure, markdown-like structure,
+   checkbox task items, and the placeholder on an empty first block. */
+.tiptap-body { outline: none; min-height: 50vh; font-size: 15px; line-height: 1.65; color: var(--color-foreground); }
+.tiptap-body > * + * { margin-top: 0.6em; }
+.tiptap-body h1 { font-size: 1.6em; font-weight: 600; letter-spacing: -0.01em; margin-top: 1.4em; }
+.tiptap-body h2 { font-size: 1.3em; font-weight: 600; margin-top: 1.3em; }
+.tiptap-body h3 { font-size: 1.1em; font-weight: 600; margin-top: 1.1em; }
+.tiptap-body ul, .tiptap-body ol { padding-left: 1.4em; }
+.tiptap-body ul { list-style: disc; }
+.tiptap-body ol { list-style: decimal; }
+.tiptap-body li + li { margin-top: 0.2em; }
+.tiptap-body li > p { margin: 0; }
+.tiptap-body ul[data-type="taskList"] { list-style: none; padding-left: 0.2em; }
+.tiptap-body ul[data-type="taskList"] li { display: flex; gap: 0.55em; align-items: flex-start; }
+.tiptap-body ul[data-type="taskList"] li > label { flex: 0 0 auto; margin-top: 0.3em; }
+.tiptap-body ul[data-type="taskList"] li > label input { accent-color: var(--color-primary); width: 0.95em; height: 0.95em; }
+.tiptap-body ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
+.tiptap-body ul[data-type="taskList"] li[data-checked="true"] > div { color: var(--color-muted-foreground); text-decoration: line-through; }
+.tiptap-body blockquote { border-left: 2px solid var(--color-border); padding-left: 0.9em; color: var(--color-muted-foreground); }
+.tiptap-body code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; background: var(--color-muted); padding: 0.1em 0.35em; border-radius: 4px; }
+.tiptap-body pre { background: var(--color-muted); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.8em 1em; overflow-x: auto; }
+.tiptap-body pre code { background: none; padding: 0; font-size: 0.85em; }
+.tiptap-body a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; }
+.tiptap-body hr { border: 0; border-top: 1px solid var(--color-border); margin: 1.4em 0; }
+.tiptap-body strong { font-weight: 600; }
+.tiptap-body p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--color-muted-foreground); opacity: 0.5; float: left; height: 0; pointer-events: none; }
+
+/* --- Notes: images, link cards, video ------------------------------------- */
+.tiptap-body img.note-image { display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 0.4em 0; }
+.tiptap-body img.note-image.ProseMirror-selectednode { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.tiptap-body .note-video { position: relative; width: 100%; max-width: 720px; aspect-ratio: 16 / 9; margin: 0.6em 0; border-radius: 10px; overflow: hidden; background: var(--color-muted); }
+.tiptap-body .note-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.tiptap-body div[data-youtube-video] { width: 100%; max-width: 720px; aspect-ratio: 16 / 9; margin: 0.6em 0; border-radius: 10px; overflow: hidden; background: var(--color-muted); }
+.tiptap-body div[data-youtube-video] iframe { width: 100%; height: 100%; border: 0; }
+.tiptap-body .note-video.ProseMirror-selectednode, .tiptap-body div[data-youtube-video].ProseMirror-selectednode { outline: 2px solid var(--color-primary); }
+.note-bookmark { margin: 0.6em 0; }
+.note-bookmark-link { display: flex; gap: 0; border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; background: var(--color-card); color: inherit; text-decoration: none !important; transition: border-color .15s; }
+.note-bookmark-link:hover { border-color: var(--color-primary); }
+.note-bookmark.is-selected .note-bookmark-link { outline: 2px solid var(--color-primary); }
+.note-bookmark-body { flex: 1 1 auto; min-width: 0; padding: 10px 14px; display: grid; gap: 4px; }
+.note-bookmark-title { font-weight: 600; font-size: 0.95em; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.note-bookmark-desc { font-size: 0.85em; color: var(--color-muted-foreground); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.note-bookmark-site { font-size: 0.75em; color: var(--color-muted-foreground); }
+.note-bookmark-img { flex: 0 0 160px; width: 160px; object-fit: cover; border-left: 1px solid var(--color-border); }
+@media (max-width: 640px) { .note-bookmark-img { flex-basis: 96px; width: 96px; } }
+

@@ -1,0 +1,33 @@
+[project]
+name = "memory-merge-api"
+version = "0.1.0"
+description = "REST API powering the merge UI for the personal memory system."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "asyncpg>=0.29",
+    "pydantic>=2.9",
+    # Phase 2: Granola recap → suggestions extraction (Haiku tool-use).
+    "anthropic>=0.40",
+    # Calendar write (Telegram capture → event) — same google libs the gmail fetcher uses.
+    "google-auth>=2.0",
+    "google-api-python-client>=2.0",
+    # gmail_fetch.account_credentials refreshes via google.auth.transport.requests.
+    "requests>=2.31",
+    # Finance module: ZenMoney/FX HTTP, PDF statement text extraction, multipart upload.
+    "httpx>=0.27",
+    "pypdf>=5.0",
+    "pdfplumber>=0.11",
+    "python-multipart>=0.0.9",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]          # make the `merge_api` package importable (package=false)
+testpaths = ["tests"]

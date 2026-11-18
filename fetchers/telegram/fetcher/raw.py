@@ -1,0 +1,263 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Any
+
+import asyncpg
+from telethon import TelegramClient, utils as tg_utils
+from telethon.tl import types
+
+from . import db
+
+
+def _peer_id_signed(entity: Any) -> int:
+    """Canonical signed Telegram peer ID. Matches the form used by
+    msg.chat_id (e.g. -1001234567890 for supergroups, -N for legacy
+    groups). raw.telegram_message stores chat_id in this form, so
+    using the same form in the allowlist makes JOINs work."""
+    return int(tg_utils.get_peer_id(entity))
+
+log = logging.getLogger(__name__)
+
+
+def _entity_kind(entity: Any) -> str:
+    if isinstance(entity, types.User):
+        return "private"
+    if isinstance(entity, types.Chat):
+        return "group"
+    if isinstance(entity, types.Channel):
+        return "supergroup" if entity.megagroup else "channel"
+    return "other"
+
+
+def _msg_kind(msg: types.Message) -> str:
+    if msg.voice:
+        return "voice"
+    if msg.photo:
+        return "photo"
+    if msg.video:
+        return "video"
+    if msg.document:
+        return "document"
+    if msg.sticker:
+        return "sticker"
+    if msg.text:
+        return "text"
+    return "other"
+
+
+def _to_dict(obj: Any) -> dict:
+    """Telethon objects expose .to_dict(); for anything else, str-coerce."""
+    if obj is None:
+        return {}
+    try:
+        return obj.to_dict()
+    except AttributeError:
+        return {"_repr": repr(obj)}
+
+
+def should_record_sender(sender: Any, seen: set) -> bool:
+    """Only real users (not channels posting as themselves, not None), and
+    only once per sender per process — the profile changes rarely and the
+    upsert is not free."""
+    if not isinstance(sender, types.User):
+        return False
+    if sender.id in seen:
+        return False
+    if len(seen) > 20000:
+        seen.clear()
+    seen.add(sender.id)
+    return True
+
+
+async def record_sender(pool: asyncpg.Pool, msg: Any, seen: set) -> None:
+    """Record the author of a GROUP message as a telegram_user, so the
+    normalizer makes a person of them and the UI can show a name instead
+    of a bare id. Private chats record the counterparty elsewhere; this is
+    what group members the owner never messaged were missing."""
+    try:
+        sender = await msg.get_sender()
+    except Exception:  # noqa: BLE001 — unknown peer, flood wait, deleted account
+        log.debug("record_sender: could not resolve sender of msg %s", getattr(msg, "id", "?"), exc_info=True)
+        return
+    if should_record_sender(sender, seen):
+        await record_user(pool, sender)
+
+
+async def record_user(pool: asyncpg.Pool, user: types.User) -> None:
+    await db.upsert_user(
+        pool,
+        source_user_id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        is_bot=bool(user.bot),
+        payload=_to_dict(user),
+    )
+
+
+AUTO_FOLLOW_SETTING = "telegram_auto_follow_max_members"
+_auto_follow_cache: dict[str, Any] = {"value": 0, "at": 0.0}
+
+
+async def auto_follow_max_members(pool: asyncpg.Pool) -> int:
+    """The owner's "follow group chats up to N members" setting (memory.app_setting,
+    set from /groups). Read at most once a minute; 0 = off."""
+    import time
+    now = time.monotonic()
+    if now - _auto_follow_cache["at"] < 60:
+        return int(_auto_follow_cache["value"])
+    try:
+        async with pool.acquire() as conn:
+            v = await conn.fetchval("SELECT value FROM memory.app_setting WHERE key = $1", AUTO_FOLLOW_SETTING)
+        if isinstance(v, str):
+            import json
+            v = json.loads(v)
+        value = int(v or 0)
+    except Exception:  # noqa: BLE001 — a missing table or row means "off"
+        value = 0
+    _auto_follow_cache.update(value=value, at=now)
+    return value
+
+
+def should_auto_follow(kind: str | None, member_count: int | None, max_members: int) -> bool:
+    """Group chats only (never channels), with a known size within the limit."""
+    return bool(max_members) and kind in ("group", "supergroup") \
+        and member_count is not None and member_count <= max_members
+
+
+async def upsert_group_allowlist_row(
+    pool: asyncpg.Pool,
+    entity: Any,
+    *,
+    last_message_at: Any = None,
+) -> None:
+    """Mark this group/supergroup/channel as 'seen' in the allowlist.
+    Idempotent — ON CONFLICT updates title + member_count + last_seen_at
+    so the UI list stays fresh, but never flips enabled. Default
+    enabled=FALSE means the live/backfill code will skip messages here
+    until the user opts in via /api/telegram/groups/{chat_id}/toggle.
+
+    `last_message_at` (Telethon datetime) is the chat's OWN last-message
+    timestamp — separate from `last_seen_at` (when WE last touched the
+    row). Only ever moves forward (GREATEST below) so a stale ingest
+    doesn't overwrite newer data."""
+    # member_count attribute lives in different places across entity types;
+    # be defensive — newer Telethon versions may rename.
+    member_count = (
+        getattr(entity, "participants_count", None)
+        or getattr(entity, "member_count", None)
+    )
+    # Read the auto-follow setting BEFORE taking a connection: it acquires
+    # one itself, and nesting acquires on a 4-connection pool deadlocked the
+    # whole listener (handler, outbox, watchdog) on 2026-10-23.
+    limit = await auto_follow_max_members(pool)
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO raw.telegram_group_allowlist
+              (chat_id, title, kind, member_count, last_seen_at, last_message_at)
+            VALUES ($1, $2, $3, $4, now(), $5)
+            ON CONFLICT (chat_id) DO UPDATE SET
+              title           = EXCLUDED.title,
+              kind            = EXCLUDED.kind,
+              member_count    = COALESCE(EXCLUDED.member_count, raw.telegram_group_allowlist.member_count),
+              last_seen_at    = now(),
+              last_message_at = GREATEST(
+                                  raw.telegram_group_allowlist.last_message_at,
+                                  EXCLUDED.last_message_at
+                                )
+            """,
+            _peer_id_signed(entity),
+            getattr(entity, "title", None),
+            _entity_kind(entity),
+            member_count,
+            last_message_at,
+        )
+        # Small group chats the owner asked to follow automatically: enable on
+        # first sight (an explicit Ignore — dismissed_at — always wins).
+        if should_auto_follow(_entity_kind(entity), member_count, limit):
+            await conn.execute(
+                """
+                UPDATE raw.telegram_group_allowlist
+                   SET enabled = TRUE, enabled_at = now()
+                 WHERE chat_id = $1 AND NOT enabled AND dismissed_at IS NULL
+                """, _peer_id_signed(entity))
+
+
+async def is_group_enabled(pool: asyncpg.Pool, chat_id_or_entity: Any) -> bool:
+    """Hot-path lookup for live ingest. Accepts either a raw msg.chat_id
+    (already signed) or a Telethon entity (we normalize to signed via
+    get_peer_id). Either way matches the allowlist's storage form."""
+    if isinstance(chat_id_or_entity, int):
+        chat_id = chat_id_or_entity
+    else:
+        chat_id = _peer_id_signed(chat_id_or_entity)
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT enabled FROM raw.telegram_group_allowlist WHERE chat_id = $1",
+            chat_id,
+        )
+    return bool(row and row["enabled"])
+
+
+async def record_chat(pool: asyncpg.Pool, entity: Any) -> None:
+    if isinstance(entity, types.User):
+        # private chats are keyed on the counterparty's user_id
+        await db.upsert_chat(
+            pool,
+            source_chat_id=entity.id,
+            kind="private",
+            title=None,
+            username=entity.username,
+            payload=_to_dict(entity),
+        )
+        return
+    await db.upsert_chat(
+        pool,
+        source_chat_id=entity.id,
+        kind=_entity_kind(entity),
+        title=getattr(entity, "title", None),
+        username=getattr(entity, "username", None),
+        payload=_to_dict(entity),
+    )
+
+
+async def record_message(
+    pool: asyncpg.Pool,
+    client: TelegramClient,
+    msg: types.Message,
+    *,
+    voice_dir: str,
+    download_voice: bool = True,
+) -> bool:
+    sender_id = msg.sender_id if msg.sender_id else None
+    chat_id = msg.chat_id
+
+    kind = _msg_kind(msg)
+    voice_path: str | None = None
+    if kind == "voice" and download_voice:
+        Path(voice_dir).mkdir(parents=True, exist_ok=True)
+        # Stable filename per (chat, message) so re-runs overwrite cleanly.
+        out = Path(voice_dir) / f"{chat_id}_{msg.id}.ogg"
+        if not out.exists():
+            try:
+                await client.download_media(msg, file=str(out))
+            except Exception as e:
+                log.warning("failed to download voice %s/%s: %s", chat_id, msg.id, e)
+                out = None
+        voice_path = str(out) if out and out.exists() else None
+
+    return await db.insert_message(
+        pool,
+        chat_id=chat_id,
+        source_message_id=msg.id,
+        sender_id=sender_id,
+        message_date=msg.date,
+        kind=kind,
+        text=msg.text or None,
+        voice_file_path=voice_path,
+        payload=_to_dict(msg),
+    )

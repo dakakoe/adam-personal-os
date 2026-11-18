@@ -1,0 +1,17 @@
+[Unit]
+Description=Sync Google Calendar every 5 minutes
+
+[Timer]
+OnBootSec=2min
+# The Schedule panel on /today reads raw.gcal_event, so this interval IS how
+# stale that panel can be. At 30min an edit made in Google Calendar could sit
+# invisible for half an hour while the panel claimed to be live — you move a
+# meeting, look at ADAM, and it disagrees with the calendar you just changed.
+#
+# Cost of 5min: one events.list per connected account per run, ~2k calls/day
+# against a 1,000,000/day quota. The staleness was never buying anything.
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

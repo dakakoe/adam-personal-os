@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly automated restore drill (alerts on failure)
+
+[Service]
+Type=oneshot
+User=ops
+WorkingDirectory=/srv/memory
+ExecStart=/srv/memory/scripts/restore-drill.sh
+StandardOutput=append:/srv/memory/logs/restore-drill.log
+StandardError=append:/srv/memory/logs/restore-drill.log

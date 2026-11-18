@@ -1,0 +1,8 @@
+[Unit]
+Description=Telegram alert: %i failed
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/memory/secrets/.env
+# Reuses the alerter bot creds. %i = the failed unit's name (via OnFailure=...@%n).
+ExecStart=/bin/bash -c 'curl -sS -m 20 "https://api.telegram.org/bot${ALERT_TG_BOT_TOKEN}/sendMessage" -d chat_id="${ALERT_TG_CHAT_ID}" --data-urlencode text="🚨 memory droplet: systemd unit FAILED — %i. Check: journalctl -u %i" >/dev/null'
