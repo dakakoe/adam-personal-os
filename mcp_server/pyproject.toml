@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "MCP server exposing the personal contact-memory store to Claude clients."
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.2",
+    # <2: mcp 2.x renamed FastMCP → MCPServer; server.py still imports mcp.server.fastmcp.
+    "mcp>=1.2,<2",
     "asyncpg>=0.29",
     "uvicorn>=0.30",
     # Semantic search: encode the user's query with the same model the

@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: pytest (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [merge_api, normalizer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv run --group dev pytest -q
+
+  mcp_server:
+    name: pytest (mcp_server)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp_server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      # The tests never load the embedding model, so skip torch and
+      # sentence-transformers (multi-GB) and install only what the tests import.
+      # Keep the mcp bound in step with pyproject.toml.
+      - run: >-
+          uv run --no-project
+          --with pytest --with 'mcp>=1.2,<2' --with asyncpg --with httpx
+          --with pgvector --with uvicorn
+          python -m pytest -q tests
+
+  whatsapp:
+    name: node --test (whatsapp)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fetchers/whatsapp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: fetchers/whatsapp/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  merge_ui:
+    name: next build (merge_ui)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: merge_ui
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: merge_ui/package-lock.json
+      - run: npm ci
+      - run: npm run build
